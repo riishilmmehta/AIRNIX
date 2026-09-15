@@ -51,22 +51,40 @@
 <div id="webgl-container"></div>
 
 <div class="css3d-container" id="css-container">
-  <div class="css3d-object" id="card-ai">
+  <div class="css3d-object" id="card-ecosystem">
     <div class="section-card">
-      <h2>AirNix AI</h2>
-      <p>Intelligent Systems. Models that learn how a business actually runs, then quietly run it better.</p>
+      <h2>One Ecosystem. Two Layers.</h2>
+      <p><b>EDUTrack Pro:</b> A digital Campus ERP with role-based panels.<br><br><b>Smart NFC ID Card:</b> A physical card that taps or scans straight into the portal — no logins, no paperwork.<br><br>Software your staff run. Hardware every student already carries.</p>
     </div>
   </div>
-  <div class="css3d-object" id="card-cloud">
+  <div class="css3d-object" id="card-platform">
     <div class="section-card">
-      <h2>AirNix Cloud</h2>
-      <p>Infrastructure. The backbone underneath every other division — built to stay up.</p>
+      <h2>Every Role, One Platform</h2>
+      <p><b>Admin:</b> Oversee users, classes, and records.<br><b>Teacher:</b> Manage attendance, grading, and syllabus.<br><b>Student:</b> Engaging learning experience in one place.<br><b>Accountant:</b> Track fees and financial records.</p>
     </div>
   </div>
-  <div class="css3d-object" id="card-robotics">
+  <div class="css3d-object" id="card-card">
     <div class="section-card">
-      <h2>AirNix Robotics</h2>
-      <p>Machines built to do the repetitive, precise work — the same way, every time, without getting tired.</p>
+      <h2>One Card. Instant Access.</h2>
+      <p><b>Tap & Go:</b> One tap opens the personal portal instantly.<br><b>QR Fallback:</b> Quick scan does the job from any phone.<br><b>Role-Aware:</b> Recognizes student, teacher, or staff.<br><b>Still Just an ID:</b> Doubles as the everyday photo ID.</p>
+    </div>
+  </div>
+  <div class="css3d-object" id="card-workflow">
+    <div class="section-card">
+      <h2>How It Works</h2>
+      <p>1. Tap or scan the card.<br>2. Portal opens instantly.<br>3. PDFs, notices, and study material appear right away.<br>4. The same view is available to parents from home.</p>
+    </div>
+  </div>
+  <div class="css3d-object" id="card-architecture">
+    <div class="section-card">
+      <h2>System Architecture</h2>
+      <p>NFC / QR Card ➔ Web Portal (EDUTrack Pro) ➔ Role Dashboards ➔ Cloud Storage.<br><br>One tap starts the chain — everything downstream is already connected.</p>
+    </div>
+  </div>
+  <div class="css3d-object" id="card-vision">
+    <div class="section-card">
+      <h2>Engineering Vision</h2>
+      <p><b>AirNix AI:</b> Intelligent Systems.<br><b>AirNix Cloud:</b> Infrastructure.<br><b>AirNix Systems:</b> Enterprise Software.<br><b>AirNix Robotics:</b> Automation & Robotics.<br><b>AirNix Security:</b> Cybersecurity.<br><br>A smarter, safer, more connected world.</p>
     </div>
   </div>
 </div>
@@ -291,9 +309,12 @@ function playHoverSound(pos) {
 }
 
 const anchors = [
-  { id: 'card-ai', pos: new THREE.Vector3(-15, 5, 5) },
-  { id: 'card-cloud', pos: new THREE.Vector3(15, -5, -15) },
-  { id: 'card-robotics', pos: new THREE.Vector3(-10, -8, -35) }
+  { id: 'card-ecosystem', pos: new THREE.Vector3(-15, 5, 5) },
+  { id: 'card-platform', pos: new THREE.Vector3(15, 8, -5) },
+  { id: 'card-card', pos: new THREE.Vector3(-20, -5, -15) },
+  { id: 'card-workflow', pos: new THREE.Vector3(10, -10, -25) },
+  { id: 'card-architecture', pos: new THREE.Vector3(-12, 10, -35) },
+  { id: 'card-vision', pos: new THREE.Vector3(18, -2, -45) }
 ];
 
 let manualCameraOverride = false;
