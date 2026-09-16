@@ -23,11 +23,14 @@
   .hud-text { font-family: 'Space Grotesk', monospace; font-size: 12px; color: rgba(255,255,255,0.6); }
   
   /* Loading screen */
-  #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1s; }
-  #loader h1 { font-family: 'Space Grotesk'; font-size: 3rem; margin-bottom: 20px; text-align: center; max-width: 80%; }
-  .progress { width: 200px; height: 2px; background: var(--line); position: relative; }
+  #loader { position: fixed; inset: 0; background: var(--black); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1s; overflow: hidden; }
+  #welcome-text { font-family: 'Space Grotesk'; font-size: 5rem; margin-bottom: 20px; text-align: center; max-width: 80%; z-index: 3; }
+  .progress { width: 200px; height: 2px; background: var(--line); position: relative; z-index: 3; }
   .progress-bar { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--silver); transition: width 0.2s; }
   
+  #dust-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  #intro-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; display: none; }
+
   /* Floating DOM elements mapped to 3D */
   .css3d-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
   .css3d-object { position: absolute; pointer-events: auto; transform-origin: top left; opacity: 0; transition: opacity 0.3s; }
@@ -35,14 +38,23 @@
   .section-card:hover { border-color: var(--silver); }
   .section-card h2 { font-family: 'Space Grotesk'; font-size: 24px; margin-bottom: 10px; }
   .section-card p { font-size: 14px; color: #8b8b92; line-height: 1.6; }
+  
+  .latest-work-card { padding: 0; position: relative; overflow: hidden; }
+  .product-bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; opacity: 0.3; }
+  .latest-work-card .card-content { position: relative; z-index: 1; padding: 40px; }
 </style>
 </head>
 <body>
 
 <div id="loader">
-  <h1>More than imagination.</h1>
-  <div class="progress"><div class="progress-bar" id="pbar"></div></div>
-  <p class="hud-text" style="margin-top: 15px;">INITIALIZING DREAMSCAPE...</p>
+  <canvas id="dust-canvas"></canvas>
+  <video id="intro-video" muted playsinline>
+    <!-- Placeholder intro video -->
+    <source src="https://cdn.pixabay.com/video/2020/05/25/40131-426189022_large.mp4" type="video/mp4">
+  </video>
+  <h1 id="welcome-text">WELCOME TO AIRNIX</h1>
+  <div class="progress" id="loader-progress"><div class="progress-bar" id="pbar"></div></div>
+  <p class="hud-text" id="loader-status" style="margin-top: 15px; z-index: 3;">INITIALIZING DREAMSCAPE...</p>
 </div>
 
 <!-- Invisible div to force scrollbar -->
@@ -87,6 +99,17 @@
       <p><b>AirNix AI:</b> Intelligent Systems.<br><b>AirNix Cloud:</b> Infrastructure.<br><b>AirNix Systems:</b> Enterprise Software.<br><b>AirNix Robotics:</b> Automation & Robotics.<br><b>AirNix Security:</b> Cybersecurity.<br><br>A smarter, safer, more connected world.</p>
     </div>
   </div>
+  <div class="css3d-object" id="card-latest-work">
+    <div class="section-card latest-work-card">
+      <video class="product-bg-video" autoplay loop muted playsinline>
+         <source src="https://cdn.pixabay.com/video/2021/08/21/85848-592185295_large.mp4" type="video/mp4">
+      </video>
+      <div class="card-content">
+        <h2>Our Latest Work</h2>
+        <p><b>Project Genesis:</b> Next-generation autonomous drone network.<br><br>Detailed product insights and metrics. The background of this info area runs the product visualization video seamlessly.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="hud">
@@ -115,28 +138,91 @@ const video = document.getElementById('portal-video');
 const pbar = document.getElementById('pbar');
 let loaded = false;
 
-video.addEventListener('canplaythrough', () => {
+const introVideo = document.getElementById('intro-video');
+
+function shatterText() {
+  const text = document.getElementById('welcome-text');
+  document.getElementById('loader-progress').style.display = 'none';
+  document.getElementById('loader-status').style.display = 'none';
+  text.style.opacity = '0';
+  
+  const canvas = document.getElementById('dust-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  
+  ctx.font = 'bold 80px "Space Grotesk"';
+  ctx.fillStyle = '#eceef2';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('WELCOME TO AIRNIX', canvas.width/2, canvas.height/2);
+  
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const particles = [];
+  for(let y = 0; y < canvas.height; y += 4) {
+    for(let x = 0; x < canvas.width; x += 4) {
+      const alpha = imgData[(y * canvas.width + x) * 4 + 3];
+      if (alpha > 128) {
+        particles.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 15,
+          vy: (Math.random() - 0.5) * 15 - 2, // drift slightly up
+          life: 1.0,
+          decay: Math.random() * 0.02 + 0.01
+        });
+      }
+    }
+  }
+  
+  let animationId;
+  function animateDust() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+    ctx.fillStyle = '#eceef2';
+    particles.forEach(p => {
+      if (p.life > 0) {
+        active = true;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillRect(p.x, p.y, 2, 2);
+      }
+    });
+    if (active) {
+      animationId = requestAnimationFrame(animateDust);
+    } else {
+      cancelAnimationFrame(animationId);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      startIntroVideo();
+    }
+  }
+  animateDust();
+}
+
+function startIntroVideo() {
+  introVideo.style.display = 'block';
+  introVideo.play().catch(e => console.log('Intro video autoplay prevented'));
+}
+
+introVideo.addEventListener('ended', () => {
+  document.getElementById('loader').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('loader').style.display = 'none';
+    initScene();
+    video.play().catch(e => console.log('Video autoplay prevented'));
+  }, 1000);
+});
+
+function finishLoading() {
   if (loaded) return;
   loaded = true;
   pbar.style.width = '100%';
-  setTimeout(() => {
-    document.getElementById('loader').style.opacity = '0';
-    setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
-    initScene();
-    video.play();
-  }, 500);
-});
+  setTimeout(shatterText, 500);
+}
 
-setTimeout(() => {
-  if (!loaded) {
-    loaded = true;
-    pbar.style.width = '100%';
-    document.getElementById('loader').style.opacity = '0';
-    setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
-    initScene();
-    video.play().catch(e => console.log('Video autoplay prevented'));
-  }
-}, 4000);
+video.addEventListener('canplaythrough', finishLoading);
+setTimeout(finishLoading, 4000);
 
 let scene, camera, renderer;
 let portalMesh;
@@ -311,6 +397,7 @@ function playHoverSound(pos) {
 const anchors = [
   { id: 'card-ecosystem', pos: new THREE.Vector3(-15, 5, 5) },
   { id: 'card-platform', pos: new THREE.Vector3(15, 8, -5) },
+  { id: 'card-latest-work', pos: new THREE.Vector3(0, 15, -10) },
   { id: 'card-card', pos: new THREE.Vector3(-20, -5, -15) },
   { id: 'card-workflow', pos: new THREE.Vector3(10, -10, -25) },
   { id: 'card-architecture', pos: new THREE.Vector3(-12, 10, -35) },
