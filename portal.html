@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AirNix — Community Portal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--bg:#050505;--fg:#f5f5f5;--muted:#8b8b8b;--line:rgba(255,255,255,.14);--silver:#d9d9d9;--ease:cubic-bezier(.16,.84,.3,1)}
+*{box-sizing:border-box}html{background:var(--bg);scroll-behavior:auto}body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;overflow-x:hidden}a{color:inherit;text-decoration:none}button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.nav{padding:28px clamp(22px,5vw,70px);display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.24em;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:11px;font-weight:700}.mark{width:23px;height:21px;position:relative}.mark:before,.mark:after{content:"";position:absolute;top:0;width:2px;height:100%;background:#eee;transform:skewX(-27deg)}.mark:before{left:7px}.mark:after{right:7px}
+.container{max-width:1200px;margin:100px auto;padding:0 24px;min-height:70vh;}
+h1{font-size:clamp(40px,6vw,80px);font-weight:500;letter-spacing:-.05em;margin-top:0;}
+p{color:var(--muted);line-height:1.7;}
+.btn{display:inline-block;border:1px solid rgba(255,255,255,.25);padding:14px 18px;font-size:9px;letter-spacing:.22em;text-transform:uppercase;transition:.35s;color:#fff;background:transparent;cursor:pointer}.btn:hover{background:#fff;color:#000}
+.panel{border:1px solid var(--line);padding:40px;margin-bottom:40px;background:rgba(255,255,255,.02)}
+input[type=file]{display:block;margin:20px 0;font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:15px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-weight:500;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.status{padding:4px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+.status.pending{background:#333;color:#ccc} .status.approved{background:#0a3a10;color:#4fdb68} .status.rejected{background:#3a0a0a;color:#db4f4f}
+.hide{display:none!important}
+.admin-actions{display:flex;gap:10px}
+.admin-actions button{padding:6px 12px;font-size:10px;border:1px solid var(--line);border-radius:4px;}
+.admin-actions button:hover{background:#fff;color:#000}
+</style>
+</head>
+<body>
+<nav class="nav"><a class="brand" href="index.html"><i class="mark"></i>AIRNIX</a><div style="display:flex;gap:24px;align-items:center"><a href="index.html">BACK TO SITE</a><a href="#" id="logoutBtn" class="hide">LOGOUT</a></div></nav>
+<div class="container">
+  <h1>Dev Community</h1>
+  <p>Join the AirNix community. Apply to collaborate on experimental tech and access internal tools.</p>
+  
+  <!-- Logged out view -->
+  <div id="loginView" class="panel">
+    <h3 style="margin-top:0;font-weight:500;font-size:24px">Authentication Required</h3>
+    <p style="margin-bottom:30px">You must sign in with your GitHub account to apply.</p>
+    <a class="btn" href="https://api.airnix.dev/api/auth/github" id="loginBtn">Login with GitHub</a>
+  </div>
+
+  <!-- Logged in view (Submit Application) -->
+  <div id="applyView" class="panel hide">
+    <h3 style="margin-top:0;font-weight:500;font-size:24px">Submit Application</h3>
+    <p id="applyStatus">Upload your CV to apply for the community.</p>
+    <form id="applyForm">
+      <input type="file" id="cvFile" accept=".pdf,.doc,.docx" required>
+      <button type="submit" class="btn" id="submitBtn">Submit Application</button>
+    </form>
+  </div>
+
+  <!-- Admin view -->
+  <div id="adminView" class="panel hide">
+    <h3 style="margin-top:0;font-weight:500;font-size:24px">Admin Panel — Pending Applications</h3>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Applicant</th><th>GitHub</th><th>Applied At</th><th>Status</th><th>CV</th><th>Actions</th></tr></thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Replace this with the actual deployed URL once known, fallback to local for dev
+const API_URL = 'https://api.airnix.dev/api'; 
+// To make it easy to test locally if the URL is changed in the prompt
+// const API_URL = 'http://localhost:5000/api';
+
+const loginView = document.getElementById('loginView');
+const applyView = document.getElementById('applyView');
+const adminView = document.getElementById('adminView');
+const logoutBtn = document.getElementById('logoutBtn');
+const applyForm = document.getElementById('applyForm');
+const loginBtn = document.getElementById('loginBtn');
+
+// Fix login button URL
+loginBtn.href = `${API_URL}/auth/github`;
+
+function getToken() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get('token');
+  if (urlToken) {
+    localStorage.setItem('airnix_token', urlToken);
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return urlToken;
+  }
+  return localStorage.getItem('airnix_token');
+}
+
+function parseJwt (token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+}
+
+const token = getToken();
+
+if (token) {
+  loginView.classList.add('hide');
+  logoutBtn.classList.remove('hide');
+  applyView.classList.remove('hide');
+  
+  const user = parseJwt(token);
+  // Check if admin (hardcoded logic on frontend just to show/hide panel, backend actually secures it)
+  const admins = ['123456', 'riishilmmehta', 'vanshsoni', 'rejoicerchristian'];
+  if (user && (admins.includes(user.github_id) || admins.includes(user.username))) {
+    adminView.classList.remove('hide');
+    loadAdminData();
+  }
+}
+
+logoutBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  localStorage.removeItem('airnix_token');
+  window.location.reload();
+});
+
+applyForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fileInput = document.getElementById('cvFile');
+  if (!fileInput.files[0]) return;
+  
+  const formData = new FormData();
+  formData.append('cv', fileInput.files[0]);
+  
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.textContent = 'Uploading...';
+  submitBtn.disabled = true;
+  
+  try {
+    const res = await fetch(`${API_URL}/applications`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    
+    if (res.ok) {
+      document.getElementById('applyStatus').textContent = 'Application submitted successfully!';
+      document.getElementById('applyStatus').style.color = '#4fdb68';
+      applyForm.reset();
+    } else {
+      const err = await res.json();
+      alert('Error: ' + err.error);
+    }
+  } catch (err) {
+    alert('Upload failed');
+  }
+  submitBtn.textContent = 'Submit Application';
+  submitBtn.disabled = false;
+});
+
+async function loadAdminData() {
+  try {
+    const res = await fetch(`${API_URL}/admin/applications`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const apps = await res.json();
+    const tbody = document.getElementById('adminTableBody');
+    tbody.innerHTML = '';
+    
+    apps.forEach(app => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div style="display:flex;align-items:center;gap:10px"><img src="${app.avatar_url}" width="24" height="24" style="border-radius:50%">${app.username}</div></td>
+        <td><a href="https://github.com/${app.username}" target="_blank" style="text-decoration:underline">@${app.username}</a></td>
+        <td>${new Date(app.applied_at).toLocaleDateString()}</td>
+        <td><span class="status ${app.status}">${app.status}</span></td>
+        <td><a href="${app.cv_url}" target="_blank" style="text-decoration:underline">View CV</a></td>
+        <td class="admin-actions">
+          ${app.status === 'pending' ? `
+            <button onclick="reviewApp(${app.id}, 'approve')">Approve</button>
+            <button onclick="reviewApp(${app.id}, 'reject')">Reject</button>
+          ` : '-'}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e) {}
+}
+
+window.reviewApp = async function(id, action) {
+  if(!confirm(`Are you sure you want to ${action} this application?`)) return;
+  try {
+    const res = await fetch(`${API_URL}/admin/applications/${id}/${action}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      loadAdminData();
+    } else {
+      alert('Action failed');
+    }
+  } catch(e) {
+    alert('Request failed');
+  }
+}
+</script>
+</body>
+</html>
